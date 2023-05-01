@@ -135,6 +135,7 @@ def find_next_target(battlefield, remaining_ship_sizes)
 end
 
 
+
 # Add the remaining_ship_sizes parameter to the minimum_moves_to_sink_all_ships function
 def minimum_moves_to_sink_all_ships(battlefield, remaining_ship_sizes)
   h_location = nil
@@ -222,17 +223,84 @@ def find_first_free_cell(battlefield)
   return r,c
 end
 
-n = gets.strip.to_i
-battlefield = []
-n.times { battlefield << gets.chomp }
+def place_ships_randomly
+  ship_quantities = { 1 => 2, 2 => 2, 3 => 1, 4 => 1, 5 => 1 }
+  ship_coordinates = Hash.new { |h, k| h[k] = [] }
 
-battlefield.map! { |cell| cell.split('') }
+  ship_quantities.each do |ship_type, quantity|
+    quantity.times do
+      loop do
+        row, col = rand(10), rand(10)
+        direction = rand(2) # 0 for horizontal, 1 for vertical
+				
+        if direction == 0 && col + ship_type <= 10 ||
+           direction == 1 && row + ship_type <= 10
 
-remaining_ship_sizes = update_remaining_ship_sizes(battlefield)
+          overlap = false
+          (0...ship_type).each do |offset|
+            current_coord = direction == 0 ? [row, col + offset] : [row + offset, col]
+            ship_coordinates.each_value do |ship_coords|
+							ship_coords.each do |coord_pair|
+								coord_pair.each do |coord|
+									if (coord[0] - current_coord[0]).abs <= 1 && (coord[1] - current_coord[1]).abs <= 1
+										overlap = true
+										break
+									end
+								end
+								break if overlap
+							end
+							break if overlap
+						end
 
-attack_r, attack_c = minimum_moves_to_sink_all_ships(battlefield, remaining_ship_sizes)
+            break if overlap
+          end
 
-attack_r, attack_c = find_first_free_cell(battlefield) if attack_r.nil?
-    
+          unless overlap
+            start_coord = [row, col]
+            end_coord = ship_type == 1 ? nil : (direction == 0 ? [row, col + ship_type - 1] : [row + ship_type - 1, col])
+            ship_coordinates[ship_type] << [start_coord, end_coord].compact
+            break
+          end
+        end
+      end
+    end
+  end
 
-puts "#{attack_r} #{attack_c}"
+  ship_coordinates
+end
+
+
+def print_ship_coordinates(ship_coordinates)
+  ship_coordinates.sort.each do |ship_type, coordinates|
+    coordinates.each do |coord_pair|
+      if ship_type == 1
+        puts "#{coord_pair[0].join(' ')}"
+      else
+        puts "#{coord_pair[0].join(' ')}:#{coord_pair[1].join(' ')}"
+      end
+    end
+  end
+end
+
+
+n = gets.strip
+
+if n == "INIT"
+	ship_coordinates = place_ships_randomly
+	print_ship_coordinates(ship_coordinates)
+else
+
+	battlefield = []
+	n.to_i.times { battlefield << gets.chomp }
+
+	battlefield.map! { |cell| cell.split('') }
+
+	remaining_ship_sizes = update_remaining_ship_sizes(battlefield)
+
+	attack_r, attack_c = minimum_moves_to_sink_all_ships(battlefield, remaining_ship_sizes)
+
+	#attack_r, attack_c = find_first_free_cell(battlefield) if attack_r.nil?
+			
+
+	puts "#{attack_r} #{attack_c}"
+end
